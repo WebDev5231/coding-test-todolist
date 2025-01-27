@@ -1,0 +1,12 @@
+[
+  {
+    "ContainingType": "coding_test_todolist_web_api.Controllers.UtilController",
+    "Method": "GetTaskById",
+    "RelativePath": "ListarTodasTarefas",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  }
+]

@@ -1,0 +1,6 @@
+@coding_test_todolist_web_api_HostAddress = http://localhost:5188
+
+GET {{coding_test_todolist_web_api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

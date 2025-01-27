@@ -1,0 +1,15 @@
+[
+  {
+    "Name": "New Profile",
+    "Projects": [
+      {
+        "Path": "coding-test-todolist\\coding-test-todolist.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "coding-test-todolist-web-api\\coding-test-todolist-web-api.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

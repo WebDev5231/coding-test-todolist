@@ -1,0 +1,3 @@
+﻿<Project>
+  <Import Project="..\build\coding-test-todolist-web-api.props" />
+</Project>
