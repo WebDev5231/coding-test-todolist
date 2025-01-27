@@ -64,14 +64,23 @@
     <script type="text/javascript">
         document.addEventListener("DOMContentLoaded", () => {
             const cacheKey = "tasksCache";
-            const cachedTasks = localStorage.getItem(cacheKey);
+            const cacheExpirationKey = "tasksCacheTimestamp";
+            const cacheExpirationTime = 5 * 60 * 1000; // 5 minutos em milissegundos
 
-            if (cachedTasks) {
+            const cachedTasks = localStorage.getItem(cacheKey);
+            const cacheTimestamp = localStorage.getItem(cacheExpirationKey);
+
+            const currentTime = new Date().getTime();
+
+            if (cachedTasks && cacheTimestamp && (currentTime - cacheTimestamp < cacheExpirationTime)) {
+                // Se os dados em cache não estiverem expirados, renderiza as tarefas em cache
                 renderTasks(JSON.parse(cachedTasks));
             } else {
+                // Se os dados em cache expiraram ou não existem, carrega da API
                 axios.get("https://localhost:7112/ListarTodasTarefas")
                     .then(response => {
                         localStorage.setItem(cacheKey, JSON.stringify(response.data));
+                        localStorage.setItem(cacheExpirationKey, currentTime); // Armazena o timestamp
                         renderTasks(response.data);
                     })
                     .catch(error => console.error("Erro ao buscar tarefas:", error));
@@ -88,14 +97,15 @@
 
                 let listItem = document.createElement("li");
                 listItem.className = "list-group-item d-flex justify-content-between align-items-center";
+                listItem.dataset.id = task.id;
                 listItem.innerHTML = `
-                            <div>
-                                <h6 class="mb-1">${task.titulo}</h6>
-                                <small>${task.descricao}</small>
-                                <p class="mb-0"><strong>Data de Término: </strong>${formattedDate}</p>
-                            </div>
-                            <button class="btn btn-danger btn-sm" onclick="removeTask(this)">Remover</button>
-                        `;
+                                                <div>
+                                                    <h6 class="mb-1">${task.titulo}</h6>
+                                                    <small>${task.descricao}</small>
+                                                    <p class="mb-0"><strong>Data de Término: </strong>${formattedDate}</p>
+                                                </div>
+                                                <button class="btn btn-danger btn-sm" onclick="removeTask(this)">Remover</button>
+                                            `;
                 taskList.appendChild(listItem);
             });
         }
@@ -106,27 +116,54 @@
             let date = document.getElementById("taskDate").value;
 
             if (title && description && date) {
-                let listItem = document.createElement("li");
-                listItem.className = "list-group-item d-flex justify-content-between align-items-center";
-                listItem.innerHTML = `
-                            <div>
-                                <h6 class="mb-1">${title}</h6>
-                                <small>${description}</small>
-                                <p class="mb-0"><strong>Data de Término: </strong>${date}</p>
-                            </div>
-                            <button class="btn btn-danger btn-sm" onclick="removeTask(this)">Remover</button>
-                        `;
-                document.getElementById("taskList").appendChild(listItem);
-                document.getElementById("taskTitle").value = "";
-                document.getElementById("taskDescription").value = "";
-                document.getElementById("taskDate").value = "";
-                var modal = bootstrap.Modal.getInstance(document.getElementById('addTaskModal'));
-                modal.hide();
+                const newTask = { titulo: title, descricao: description, dataTermino: date };
+
+                axios.post("https://localhost:7112/AdicionarTarefa", newTask)
+                    .then(response => {
+                        const task = response.data; // Tarefa retornada após inserção no banco
+                        let listItem = document.createElement("li");
+                        listItem.className = "list-group-item d-flex justify-content-between align-items-center";
+                        listItem.dataset.id = task.id;
+                        listItem.innerHTML = `
+                                    <div>
+                                        <h6 class="mb-1">${task.titulo}</h6>
+                                        <small>${task.descricao}</small>
+                                        <p class="mb-0"><strong>Data de Término: </strong>${task.dataTermino}</p>
+                                    </div>
+                                    <button class="btn btn-danger btn-sm" onclick="removeTask(this)">Remover</button>
+                                `;
+                        document.getElementById("taskList").appendChild(listItem);
+
+                        // Limpar os campos e fechar o modal
+                        document.getElementById("taskTitle").value = "";
+                        document.getElementById("taskDescription").value = "";
+                        document.getElementById("taskDate").value = "";
+                        var modal = bootstrap.Modal.getInstance(document.getElementById('addTaskModal'));
+                        modal.hide();
+
+                        // Atualizar localStorage
+                        let tasks = JSON.parse(localStorage.getItem("tasksCache") || "[]");
+                        tasks.push(task);
+                        localStorage.setItem("tasksCache", JSON.stringify(tasks));
+                        localStorage.setItem("tasksCacheTimestamp", new Date().getTime()); // Atualiza o timestamp
+                    })
+                    .catch(error => console.error("Erro ao adicionar tarefa:", error));
             }
         }
 
         function removeTask(element) {
-            element.parentElement.remove();
+            const taskId = element.parentElement.dataset.id; // Obtendo o ID da tarefa
+            axios.delete(`https://localhost:7112/DeletarTarefa/${taskId}`)
+                .then(response => {
+                    element.parentElement.remove();
+
+                    // Atualizar localStorage
+                    const tasks = JSON.parse(localStorage.getItem("tasksCache") || "[]");
+                    const updatedTasks = tasks.filter(task => task.id !== parseInt(taskId));
+                    localStorage.setItem("tasksCache", JSON.stringify(updatedTasks));
+                    localStorage.setItem("tasksCacheTimestamp", new Date().getTime()); // Atualiza o timestamp
+                })
+                .catch(error => console.error("Erro ao remover tarefa:", error));
         }
     </script>
 </body>
